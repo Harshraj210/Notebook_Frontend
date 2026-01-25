@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Workspace Colors - defining them as CSS variables in v4 */
+  --color-brand-dark: #0c0c0e;
+  --color-brand-card: #111113;
+  --color-brand-border: #27272a;
+  --color-brand-accent: #22d3ee;
+
+  /* Overriding default theme variables */
+  --color-background: var(--color-brand-dark);
+  --color-foreground: #d4d4d8;
+  --color-border: var(--color-brand-border);
+
+  /* Font configuration */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Custom base styles using @apply with v4 variables */
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Custom scrollbar using Tailwind utilities */
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-zinc-800 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-700;
+  }
 }
