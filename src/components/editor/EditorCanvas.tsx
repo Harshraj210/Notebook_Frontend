@@ -3,9 +3,28 @@
 import React from 'react';
 import SmartEditor from '@/components/editor/SmartEditor';
 import { useNotebookStore } from '@/store/useNotebookStore';
+import { useFileStore } from '@/store/useFileStore';
+import RecentFilesView from '@/components/files/RecentFilesView';
+import FileEditorView from '@/components/files/FileEditorView';
 
 const EditorCanvas = () => {
     const { activeNoteId, updateShadowContent } = useNotebookStore();
+    const { isOverviewOpen, activeFileId } = useFileStore();
+
+    if (isOverviewOpen) {
+        if (activeFileId) {
+            return (
+                <div className="flex flex-col flex-1 h-screen overflow-hidden bg-brand-dark">
+                    <FileEditorView />
+                </div>
+            );
+        }
+        return (
+            <div className="flex flex-col flex-1 h-screen overflow-hidden bg-brand-dark">
+                 <RecentFilesView />
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col flex-1 h-screen overflow-hidden bg-brand-dark">

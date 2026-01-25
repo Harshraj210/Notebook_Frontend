@@ -1,15 +1,19 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNotebookStore, NotebookItem } from '@/store/useNotebookStore';
+import { useFileStore } from '@/store/useFileStore';
 import ProfileTile from '@/components/layout/ProfileTile';
 import FolderItem from '@/components/layout/FolderItem';
-import { Search, Settings, HelpCircle, Pin, Home, ChevronsLeft, ChevronsRight, File, Folder } from 'lucide-react';
+import { Search, Settings, HelpCircle, Pin, Home, ChevronsLeft, ChevronsRight, File, Folder, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
 const Sidebar = () => {
     const { workspaces, activeWorkspaceId, setActiveNoteId } = useNotebookStore();
+    const { openOverview, isOverviewOpen } = useFileStore();
+    
+    // View state: 'default' (folders) | 'files' are handled by useFileStore's isOverviewOpen now effectively
     const [isCollapsed, setIsCollapsed] = React.useState(false);
 
     const activeWorkspace = workspaces.find(ws => ws.id === activeWorkspaceId);
@@ -27,15 +31,18 @@ const Sidebar = () => {
 
     const pinnedItems = getPinnedItems(items);
 
-    const SidebarItem = ({ icon: Icon, label, onClick, shortcut }: { icon: any, label: string, onClick?: () => void, shortcut?: string }) => (
+    const SidebarItem = ({ icon: Icon, label, onClick, shortcut, isActive }: { icon: any, label: string, onClick?: () => void, shortcut?: string, isActive?: boolean }) => (
         <Tooltip.Provider delayDuration={400}>
             <Tooltip.Root>
                 <Tooltip.Trigger asChild>
                     <button
                         onClick={onClick}
                         className={cn(
-                            "flex items-center gap-2 w-full bg-zinc-900/50 border border-zinc-800/50 rounded-lg text-zinc-500 hover:text-zinc-300 transition-all duration-300 text-xs group h-9",
-                            isCollapsed ? "justify-center px-0" : "px-3 py-2"
+                            "flex items-center gap-2 w-full border border-transparent rounded-lg transition-all duration-300 text-xs group h-9",
+                            isCollapsed ? "justify-center px-0" : "px-3 py-2",
+                            isActive 
+                                ? "bg-zinc-800 text-zinc-100" 
+                                : "bg-transparent hover:bg-zinc-800/50 text-zinc-500 hover:text-zinc-300"
                         )}
                     >
                         <Icon size={16} className="shrink-0" />
@@ -64,6 +71,18 @@ const Sidebar = () => {
         </Tooltip.Provider>
     );
 
+    const handleHomeClick = () => {
+        // Reset legacy URL
+        setActiveNoteId(null);
+        // Reset file store view
+        useFileStore.getState().closeOverview();
+    };
+
+    const handleFilesClick = () => {
+        openOverview();
+        setActiveNoteId(null); // Clear legacy selection
+    };
+
     return (
         <aside
             className={cn(
@@ -72,7 +91,7 @@ const Sidebar = () => {
                 isCollapsed ? "w-[64px] overflow-hidden" : "w-[260px]"
             )}
         >
-            {/* Toggle Button - Standardized size and alignment */}
+            {/* Toggle Button */}
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className={cn(
@@ -95,7 +114,12 @@ const Sidebar = () => {
             {/* Sidebar Actions */}
             <div className="px-4 space-y-2 mt-2">
                 <SidebarItem icon={Search} label="Quick Search" shortcut="⌘K" />
-                <SidebarItem icon={Home} label="Home" onClick={() => setActiveNoteId(null)} />
+                <SidebarItem 
+                    icon={Home} 
+                    label="Home" 
+                    onClick={handleHomeClick}
+                    isActive={!isOverviewOpen && !activeWorkspaceId}
+                />
             </div>
 
             {/* Body: Navigation & Library */}
@@ -105,49 +129,58 @@ const Sidebar = () => {
             )}>
                 {/* Creation Actions with Labels */}
                 <div className="px-2 space-y-1">
-                    <SidebarItem icon={File} label="File" />
-                    <SidebarItem icon={Folder} label="Folder" />
+                    <SidebarItem 
+                        icon={File} 
+                        label="File" 
+                        onClick={handleFilesClick} 
+                        isActive={isOverviewOpen}
+                    />
+                    <SidebarItem 
+                        icon={Folder} 
+                        label="Folder" 
+                        onClick={handleHomeClick}
+                        isActive={!isOverviewOpen}
+                    />
                 </div>
 
-                {/* Pinned Section */}
-                {pinnedItems.length > 0 && (
-                    <div>
-                        <div className="px-4 mb-2 flex items-center gap-2">
-                            <Pin size={12} className="text-zinc-500" />
-                            <span className={cn(
-                                "text-[10px] font-bold uppercase tracking-widest text-zinc-500 transition-opacity duration-200",
-                                isCollapsed ? "opacity-0" : "opacity-100"
-                            )}>
-                                Pinned
-                            </span>
-                        </div>
-                        {pinnedItems.map(item => (
-                            <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
-                        ))}
-                    </div>
-                )}
-
-                {/* Full Library (Recursive) */}
-                <div>
-                    <div className="px-4 mb-2 flex items-center justify-between">
-                        <span className={cn(
-                            "text-[10px] font-bold uppercase tracking-widest text-zinc-500 transition-opacity duration-200",
-                            isCollapsed ? "opacity-0" : "opacity-100"
-                        )}>
-                            Library
-                        </span>
-                    </div>
-                    <div className="space-y-0.5">
-                        {items.map((item) => (
-                            <FolderItem key={item.id} item={item} level={1} />
-                        ))}
-                        {items.length === 0 && (
-                            <div className="px-4 py-8 text-center">
-                                <p className="text-xs text-zinc-600 italic">No notes in this workspace</p>
+                {/* Legacy Folder View */}
+                {!isOverviewOpen && (
+                    <>
+                        {/* Pinned Section */}
+                        {pinnedItems.length > 0 && (
+                            <div>
+                                <div className="px-4 mb-2 flex items-center gap-2">
+                                    <Pin size={12} className="text-zinc-500" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                                        Pinned
+                                    </span>
+                                </div>
+                                {pinnedItems.map(item => (
+                                    <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
+                                ))}
                             </div>
                         )}
-                    </div>
-                </div>
+
+                        {/* Full Library */}
+                        <div>
+                            <div className="px-4 mb-2 flex items-center justify-between">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                                    Library
+                                </span>
+                            </div>
+                            <div className="space-y-0.5">
+                                {items.map((item) => (
+                                    <FolderItem key={item.id} item={item} level={1} />
+                                ))}
+                                {items.length === 0 && (
+                                    <div className="px-4 py-8 text-center">
+                                        <p className="text-xs text-zinc-600 italic">No notes in this workspace</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className={cn(

@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { User, LogOut, Settings, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { useNotebookStore } from '@/store/useNotebookStore';
@@ -48,8 +49,10 @@ const ProfileTile = () => {
                     <DropdownMenu.Separator className="h-px bg-zinc-800/60 my-1.5 mx-1" />
 
                     {/* Action Section */}
-                    <DropdownMenu.Item className="flex items-center gap-2.5 px-2 py-1.5 text-sm text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100 rounded cursor-pointer outline-none transition-colors">
-                        <LayoutDashboard size={14} /> Dashboard
+                    <DropdownMenu.Item asChild>
+                        <Link href="/profile" className="flex items-center gap-2.5 px-2 py-1.5 text-sm text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100 rounded cursor-pointer outline-none transition-colors">
+                            <LayoutDashboard size={14} /> Dashboard
+                        </Link>
                     </DropdownMenu.Item>
                     <DropdownMenu.Item className="flex items-center gap-2.5 px-2 py-1.5 text-sm text-red-400/80 hover:bg-red-500/10 hover:text-red-400 rounded cursor-pointer outline-none transition-colors">
                         <LogOut size={14} /> Log out
