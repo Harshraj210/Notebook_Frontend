@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import Toolbar from '@/components/editor/Toolbar';
 import SmartEditor from '@/components/editor/SmartEditor';
 import { useNotebookStore } from '@/store/useNotebookStore';
 
@@ -11,7 +10,6 @@ const EditorCanvas = () => {
     return (
         <div className="flex flex-col flex-1 h-screen overflow-hidden bg-brand-dark">
 
-            <Toolbar />
 
             <main className="flex-1 overflow-y-auto p-4 md:p-12 custom-scrollbar">
                 <div className="max-w-3xl mx-auto min-h-full">

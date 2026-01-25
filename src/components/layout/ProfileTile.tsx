@@ -2,7 +2,7 @@
 
 import React from 'react';
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { User, LogOut, Settings, ChevronDown, LayoutDashboard, Briefcase, Plus } from 'lucide-react';
+import { User, LogOut, Settings, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { useNotebookStore } from '@/store/useNotebookStore';
 import { cn } from '@/lib/utils';
 
@@ -11,39 +11,52 @@ const ProfileTile = () => {
     const activeWorkspace = workspaces.find(ws => ws.id === activeWorkspaceId);
 
     return (
-        <div className="p-4">
-            <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                    <button className="flex items-center gap-3 w-full p-2 hover:bg-zinc-900 rounded-lg transition-all duration-200 outline-none text-left border border-transparent hover:border-zinc-800">
-                        <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg">
-                            {activeWorkspace?.name.charAt(0)}
+        <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+                <button className="flex items-center gap-2.5 w-full p-1.5 hover:bg-zinc-800/80 rounded-lg transition-all duration-200 outline-none text-left border border-transparent hover:border-zinc-700/50 group">
+                    <div className="w-7 h-7 rounded-sm bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-[10px] shadow-sm shrink-0">
+                        P
+                    </div>
+                    <div className="flex-1 overflow-hidden transition-all duration-300">
+                        <div className="text-xs font-semibold text-zinc-200 truncate whitespace-nowrap leading-tight max-w-[120px]">
+                            Hi, John
                         </div>
-                        <div className="flex-1 overflow-hidden">
-                            <div className="text-sm font-semibold text-zinc-100 truncate">John Doe</div>
-                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">Pro Plan</div>
+                    </div>
+                    <ChevronDown size={12} className="text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                </button>
+            </DropdownMenu.Trigger>
+
+            <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                    side="right"
+                    align="start"
+                    sideOffset={12}
+                    className={cn(
+                        "w-64 bg-[#1a1a1a] border border-zinc-800 rounded-lg shadow-2xl p-1.5 z-100 outline-none",
+                        "animate-in fade-in zoom-in-95 slide-in-from-left-2 duration-200"
+                    )}
+                >
+                    {/* Top Section: Identity */}
+                    <div className="px-2 py-2 mb-1 flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-zinc-100">
+                                {activeWorkspace?.name || "Personal"}
+                            </span>
                         </div>
-                        <ChevronDown size={14} className="text-zinc-500" />
-                    </button>
-                </DropdownMenu.Trigger>
+                    </div>
 
-                <DropdownMenu.Portal>
-                    <DropdownMenu.Content
-                        className="w-64 bg-brand-dark border border-zinc-800 rounded-xl shadow-2xl p-2 z-100 animate-in fade-in zoom-in-95 duration-200"
-                        sideOffset={8}
-                    >
-                        <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 rounded-lg cursor-pointer outline-none">
-                            <LayoutDashboard size={14} /> Dashboard
-                        </DropdownMenu.Item>
+                    <DropdownMenu.Separator className="h-px bg-zinc-800/60 my-1.5 mx-1" />
 
-                        <DropdownMenu.Separator className="h-px bg-zinc-800 my-2" />
-
-                        <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg cursor-pointer outline-none">
-                            <LogOut size={14} /> Logout
-                        </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-            </DropdownMenu.Root>
-        </div>
+                    {/* Action Section */}
+                    <DropdownMenu.Item className="flex items-center gap-2.5 px-2 py-1.5 text-sm text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100 rounded cursor-pointer outline-none transition-colors">
+                        <LayoutDashboard size={14} /> Dashboard
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item className="flex items-center gap-2.5 px-2 py-1.5 text-sm text-red-400/80 hover:bg-red-500/10 hover:text-red-400 rounded cursor-pointer outline-none transition-colors">
+                        <LogOut size={14} /> Log out
+                    </DropdownMenu.Item>
+                </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+        </DropdownMenu.Root>
     );
 };
 
