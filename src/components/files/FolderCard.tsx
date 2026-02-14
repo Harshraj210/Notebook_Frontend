@@ -2,19 +2,34 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, Trash2, Edit2 } from 'lucide-react';
 
 interface FolderCardProps {
     name: string;
     fileCount: number;
     onClick?: () => void;
     onRename?: (newName: string) => void;
+    onDelete?: () => void;
+    onDeleteRequest?: () => void;
+    isDeleting?: boolean;
 }
 
-const FolderCard = ({ name, fileCount, onClick, onRename }: FolderCardProps) => {
+const FolderCard = ({ name, fileCount, onClick, onRename, onDelete, onDeleteRequest, isDeleting: isDeletingProp }: FolderCardProps) => {
     const [isEditing, setIsEditing] = React.useState(false);
+    const [isDeletingLocal, setIsDeletingLocal] = React.useState(false);
     const [tempName, setTempName] = React.useState(name);
     const inputRef = React.useRef<HTMLInputElement>(null);
+
+    // Sync prop state to local for animation
+    React.useEffect(() => {
+        if (isDeletingProp) {
+            setIsDeletingLocal(true);
+            const timer = setTimeout(() => {
+                onDelete?.();
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [isDeletingProp, onDelete]);
 
     React.useEffect(() => {
         if (isEditing && inputRef.current) {
@@ -42,29 +57,45 @@ const FolderCard = ({ name, fileCount, onClick, onRename }: FolderCardProps) => 
         e.stopPropagation(); // Prevent triggering parent click
     };
 
+    const handleDeleteClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onDeleteRequest?.();
+    };
+
+    const isAnimatingDelete = isDeletingLocal || isDeletingProp;
+
     return (
         <motion.div
             layout
             onClick={(e) => {
-                // If editing, don't trigger navigation
-                if (isEditing) return;
+                // If editing or deleting, don't trigger navigation
+                if (isEditing || isAnimatingDelete) return;
                 onClick?.();
             }}
             whileHover="hover"
             initial="initial"
-            className="group flex flex-col gap-4 cursor-pointer relative"
+            className={`group flex flex-col gap-4 cursor-pointer relative transition-all duration-300 ${isAnimatingDelete ? 'blur-sm opacity-0 scale-95 pointer-events-none' : ''}`}
         >
-            {/* Options Button -> Trigger Rename */}
-            <button 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setIsEditing(true);
-                }}
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 text-zinc-400 hover:text-white hover:bg-black/60 transition-all z-50 opacity-0 group-hover:opacity-100"
-                title="Rename"
-            >
-                <MoreVertical size={14} />
-            </button>
+            {/* Action Buttons */}
+            <div className="absolute top-2 right-2 flex items-center gap-2 z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditing(true);
+                    }}
+                    className="p-1.5 rounded-full bg-black/40 text-zinc-400 hover:text-white hover:bg-black/60 transition-all"
+                    title="Rename"
+                >
+                    <Edit2 size={14} />
+                </button>
+                <button 
+                    onClick={handleDeleteClick}
+                    className="p-1.5 rounded-full bg-black/40 text-zinc-400 hover:text-red-400 hover:bg-black/60 transition-all"
+                    title="Delete"
+                >
+                    <Trash2 size={14} />
+                </button>
+            </div>
 
             {/* Folder Icon Container */}
             <div className="aspect-[4/3] relative flex items-center justify-center pt-8">
