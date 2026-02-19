@@ -174,12 +174,22 @@ const AIPanel = () => {
     const { isAIOpen, toggleAI, activeTab, setTab } = useAIStore();
 
     return (
-        <aside 
-            className={cn(
-                "fixed top-0 right-0 h-screen w-[380px] bg-brand-dark border-l border-brand-border z-50 flex flex-col shadow-2xl transform transition-transform duration-300 ease-in-out will-change-transform",
-                isAIOpen ? "translate-x-0" : "translate-x-full"
+        <>
+            {/* Mobile Backdrop */}
+            {isAIOpen && (
+                <div 
+                    onClick={toggleAI}
+                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in duration-300 transition-opacity"
+                    aria-hidden="true"
+                />
             )}
-        >
+
+            <aside 
+                className={cn(
+                    "fixed top-0 right-0 h-screen w-full md:w-[380px] bg-brand-dark border-l border-brand-border z-50 flex flex-col shadow-2xl transform transition-transform duration-300 ease-in-out will-change-transform",
+                    isAIOpen ? "translate-x-0" : "translate-x-full"
+                )}
+            >
             {/* Header */}
             <div className="h-16 flex items-center justify-between px-4 border-b border-brand-border bg-brand-dark/95 backdrop-blur shrink-0">
                 <div className="flex items-center gap-2">
@@ -222,6 +232,7 @@ const AIPanel = () => {
                 {activeTab === 'chat' && <ChatView />}
             </div>
         </aside>
+        </>
     );
 };
 

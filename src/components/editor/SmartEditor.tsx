@@ -10,13 +10,19 @@ interface SmartEditorProps {
 }
 
 const SmartEditor = ({ initialContent = "", onSync }: SmartEditorProps) => {
-    const [content, setContent] = useState(initialContent);
     const editorRef = useRef<HTMLDivElement>(null);
 
     // Anti-Hallucination Guardrail: Strip spans before re-render or sync
     const cleanHTML = (html: string) => {
         return html.replace(HTML_CLEANER_PATTERN, '');
     };
+
+    // Initialize content only once when component mounts or key changes
+    useEffect(() => {
+        if (editorRef.current) {
+            editorRef.current.innerHTML = initialContent;
+        }
+    }, []);
 
     const handleInput = debounce(() => {
         if (!editorRef.current) return;
@@ -37,7 +43,6 @@ const SmartEditor = ({ initialContent = "", onSync }: SmartEditorProps) => {
             onInput={handleInput}
             className="outline-none min-h-[500px] p-6 font-mono text-sm leading-relaxed"
             spellCheck={false}
-            dangerouslySetInnerHTML={{ __html: content }}
         />
     );
 };

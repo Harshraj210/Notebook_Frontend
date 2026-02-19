@@ -6,13 +6,14 @@ import { useFolderStore } from '@/store/useFolderStore';
 import { useFileStore } from '@/store/useFileStore';
 import ProfileTile from '@/components/layout/ProfileTile';
 import FolderItem from '@/components/layout/FolderItem';
+import PinnedFileItem from '@/components/layout/PinnedFileItem';
 import { Search, Settings, HelpCircle, Pin, Home, ChevronsLeft, ChevronsRight, File, Folder, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
 const Sidebar = () => {
     const { workspaces, activeWorkspaceId, setActiveNoteId, activeNoteId } = useNotebookStore();
-    const { openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview } = useFileStore();
+    const { files, openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview } = useFileStore();
     const { folders, openFolder } = useFolderStore();
 
     // Search State
@@ -272,7 +273,7 @@ const Sidebar = () => {
                 </div>
 
                 {/* Pinned Section */}
-                {pinnedItems.length > 0 && (
+                {(pinnedItems.length > 0 || files.some(f => f.pinned)) && (
                     <div>
                         <div className="px-4 mb-2 flex items-center gap-2">
                             <span className="text-zinc-500">
@@ -284,6 +285,9 @@ const Sidebar = () => {
                         </div>
                         {pinnedItems.map(item => (
                             <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
+                        ))}
+                        {files.filter(f => f.pinned).map(file => (
+                             <PinnedFileItem key={file.id} file={file} />
                         ))}
                     </div>
                 )}

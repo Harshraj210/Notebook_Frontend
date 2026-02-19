@@ -8,6 +8,7 @@ export type NoteFile = {
     content: string;
     createdAt: string;
     updatedAt: string;
+    pinned?: boolean;
 };
 
 interface FileState {
@@ -26,6 +27,8 @@ interface FileState {
     openFolders: () => void;
     closeFolders: () => void;
     closeFile: () => void;
+    deleteFile: (id: string) => void;
+    toggleFilePin: (id: string) => void;
 }
 
 export const useFileStore = create<FileState>()(
@@ -82,6 +85,21 @@ export const useFileStore = create<FileState>()(
             openFolders: () => set({ isFoldersOpen: true, isOverviewOpen: false, activeFileId: null }),
             closeFolders: () => set({ isFoldersOpen: false }),
             closeFile: () => set({ activeFileId: null }), // Go back to dashboard
+            deleteFile: (id: string) => {
+                set((state) => ({
+                    files: state.files.filter((f) => f.id !== id),
+                    activeFileId: state.activeFileId === id ? null : state.activeFileId
+                }));
+            },
+            toggleFilePin: (id: string) => {
+                set((state) => ({
+                    files: state.files.map((file) =>
+                        file.id === id
+                            ? { ...file, pinned: !file.pinned }
+                            : file
+                    ),
+                }));
+            },
         }),
         {
             name: 'files-storage', // localStorage key
