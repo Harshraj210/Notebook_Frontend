@@ -159,21 +159,11 @@ const FoldersView = () => {
             {/* FAB */}
             <motion.button
                 onClick={createFolder}
-                whileHover={{ scale: 1.05, y: -2 }}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                animate={{
-                    y: [0, -5, 0],
-                }}
-                transition={{
-                    y: {
-                        duration: 5,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                    }
-                }}
-                className="absolute bottom-8 right-8 w-16 h-16 bg-[#22d3ee]/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl shadow-cyan-500/10 border border-cyan-400/20 z-50 group hover:shadow-cyan-500/30 transition-shadow"
+                className="absolute bottom-8 right-8 w-16 h-16 bg-[#22d3ee] rounded-full flex items-center justify-center z-50 group transition-all hover:bg-[#15abbf] shadow-lg shadow-cyan-500/20"
             >
-                <FolderPlus size={28} className="text-[#0c0c0e] transform group-hover:scale-110 transition-transform duration-500 ease-out" strokeWidth={2.5} />
+                <Plus size={28} className="text-white transform group-hover:scale-110 transition-transform duration-500 ease-out" strokeWidth={2.5} />
             </motion.button>
 
             {/* Delete Confirmation Modal */}

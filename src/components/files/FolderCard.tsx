@@ -83,7 +83,7 @@ const FolderCard = ({ name, fileCount, onClick, onRename, onDelete, onDeleteRequ
             style={{ perspective: 600 }}
         >
             {/* Folder Icon Container */}
-            <div className="aspect-6/5 relative flex items-center justify-center pt-8">
+            <div className="aspect-[6/5] relative flex items-center justify-center pt-8 overflow-hidden">
                 {/* Back of the folder */}
                 <div className="absolute inset-0 top-[20%] bg-[#08617a] rounded-xl shadow-lg" />
 
