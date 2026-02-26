@@ -71,7 +71,7 @@ const RecentFilesView = () => {
 
             {/* Delete Confirmation Modal */}
             {deleteTargetId && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-[#18181b] border border-zinc-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold text-zinc-100 mb-2">Delete File?</h3>
                         <p className="text-zinc-400 text-sm mb-6">

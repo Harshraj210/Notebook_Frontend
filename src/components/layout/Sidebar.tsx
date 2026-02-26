@@ -6,7 +6,20 @@ import { useFolderStore } from '@/store/useFolderStore';
 import { useFileStore } from '@/store/useFileStore';
 import ProfileTile from '@/components/layout/ProfileTile';
 import FolderItem from '@/components/layout/FolderItem';
-import { Search, Settings, HelpCircle, Pin, Home, ChevronsLeft, ChevronsRight, File, Folder, Plus } from 'lucide-react';
+import SidebarHeading from '@/components/layout/SidebarHeading';
+import {
+    Search,
+    Home,
+    Folders,
+    FileText,
+    Plus,
+    PanelLeft,
+    ChevronsRight,
+    Settings,
+    HelpCircle,
+    Layout,
+    Pin
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,7 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const Sidebar = () => {
     const { workspaces, activeWorkspaceId, setActiveNoteId, activeNoteId } = useNotebookStore();
     const { openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview } = useFileStore();
-    const { folders, openFolder } = useFolderStore();
+    const { folders, openFolder, createFolder } = useFolderStore();
 
     // Search State
     const [searchQuery, setSearchQuery] = useState("");
@@ -187,16 +200,16 @@ const Sidebar = () => {
             {/* Header: Branding & Toggle */}
             <div className={cn(
                 "flex items-center min-h-[64px] transition-all duration-300 relative",
-                isCollapsed ? "justify-center px-0" : "justify-between pl-5 pr-2.5"
+                isCollapsed ? "justify-center" : "justify-between pl-5 pr-2.5"
             )}>
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     {!isCollapsed && (
                         <motion.div
                             key="expanded-logo"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="flex items-center"
+                            initial={{ opacity: 0, display: "none" }}
+                            animate={{ opacity: 1, display: "flex" }}
+                            exit={{ opacity: 0, transitionEnd: { display: "none" } }}
+                            className="items-center"
                         >
                             <span className="text-sm font-black text-white tracking-widest uppercase">Code Logs</span>
                         </motion.div>
@@ -207,7 +220,7 @@ const Sidebar = () => {
                     onClick={() => setIsCollapsed(!isCollapsed)}
                     className={cn(
                         "z-50 flex items-center justify-center transition-all duration-300 text-white hover:text-white group",
-                        isCollapsed ? "w-8 h-8" : "w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10"
+                        isCollapsed ? "w-8 h-8 mx-auto" : "w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10"
                     )}
                 >
                     {isCollapsed ? (
@@ -283,58 +296,68 @@ const Sidebar = () => {
                     />
                 </div>
 
-                {/* Pinned Section */}
-                {pinnedItems.length > 0 && (
-                    <div>
-                        <div className="px-4 mb-2 flex items-center gap-2">
-                            <span className="text-zinc-500">
-                                <Pin size={12} />
-                            </span>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                                Pinned
-                            </span>
-                        </div>
-                        {pinnedItems.map(item => (
-                            <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
-                        ))}
-                    </div>
-                )}
-
-                {/* Library */}
-                <div className="space-y-2">
-                    <SidebarHeading
-                        onAddFolder={() => {
-                            handleFoldersClick();
-                            createFolder();
-                        }}
-                        onAddFile={() => handleFilesClick()}
-                    />
-                    <div className="space-y-0.5">
-                        {items.map((item) => (
-                            <FolderItem key={item.id} item={item} level={1} />
-                        ))}
-                        {items.length === 0 && (
-                            <div className="px-4 py-8 text-center bg-zinc-900/20 rounded-xl border border-dashed border-zinc-800/30">
-                                <p className="text-[11px] text-zinc-600 font-medium">Empty library</p>
+                {!isCollapsed && (
+                    <div className="space-y-6">
+                        {/* Pinned Section */}
+                        {pinnedItems.length > 0 && (
+                            <div className="overflow-hidden">
+                                <div className="mb-2 flex items-center gap-2 px-4">
+                                    <span className="text-zinc-500 shrink-0">
+                                        <Pin size={12} />
+                                    </span>
+                                    <AnimatePresence>
+                                        {!isCollapsed && (
+                                            <motion.span
+                                                initial={{ opacity: 0, display: "none" }}
+                                                animate={{ opacity: 1, display: "inline-block" }}
+                                                exit={{ opacity: 0, transitionEnd: { display: "none" } }}
+                                                className="text-[10px] font-bold uppercase tracking-widest text-zinc-500"
+                                            >
+                                                Pinned
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                                {pinnedItems.map(item => (
+                                    <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
+                                ))}
                             </div>
                         )}
-                    </div>
-                </div>
-            </motion.div>
-                    )}
-        </AnimatePresence>
-            </div >
 
-    {/* Footer: User Profile */ }
-    < div className = {
-        cn(
-                "mt-auto border-t border-white/12 bg-[#0c0c0e]/80 backdrop-blur-md transition-all duration-300",
-            isCollapsed? "p-2" : "p-3"
-        )
-    } >
-        <ProfileTile isCollapsed={isCollapsed} />
-            </div >
-        </motion.aside >
+                        {/* Library */}
+                        <div className="space-y-2 overflow-hidden">
+                            <SidebarHeading
+                                onAddFolder={() => {
+                                    handleFoldersClick();
+                                    createFolder();
+                                }}
+                                onAddFile={() => handleFilesClick()}
+                            />
+                            <div className="space-y-0.5">
+                                {items.map((item) => (
+                                    <FolderItem key={item.id} item={item} level={1} />
+                                ))}
+                                {items.length === 0 && (
+                                    <div className="px-4 py-8 text-center bg-zinc-900/20 rounded-xl border border-dashed border-zinc-800/30">
+                                        <p className="text-[11px] text-zinc-600 font-medium">Empty library</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Footer: User Profile */}
+            {!isCollapsed && (
+                <div className={cn(
+                    "mt-auto border-t border-white/12 bg-[#0c0c0e]/80 backdrop-blur-md transition-all duration-300",
+                    isCollapsed ? "p-2" : "p-3"
+                )}>
+                    <ProfileTile isCollapsed={isCollapsed} />
+                </div>
+            )}
+        </motion.aside>
     );
 };
 
