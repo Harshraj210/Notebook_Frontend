@@ -196,36 +196,38 @@ const Sidebar = () => {
                 "h-screen bg-[#0c0c0e] border-r border-white/12 flex flex-col font-sans select-none overflow-visible relative z-40"
             )}
         >
-            {/* Header: User Profile & Toggle */}
+            {/* Header: Code Logs branding + collapse toggle */}
             <div className={cn(
                 "flex items-center min-h-[64px] transition-all duration-300 relative",
-                isCollapsed ? "justify-center pt-2" : "justify-between pl-3 pr-3 pt-3 pb-1 gap-2"
+                isCollapsed ? "justify-center" : "justify-between pl-5 pr-2.5"
             )}>
-                {!isCollapsed && (
-                    <div className="flex-1 min-w-0">
-                        <ProfileTile isCollapsed={isCollapsed} />
-                    </div>
-                )}
-                {isCollapsed && (
-                    <div className="w-full flex items-center justify-center relative">
-                        <ProfileTile isCollapsed={isCollapsed} />
-                        <button
-                            onClick={() => setIsCollapsed(false)}
-                            className="absolute inset-0 z-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/60 rounded-xl"
+                <AnimatePresence>
+                    {!isCollapsed && (
+                        <motion.div
+                            key="expanded-logo"
+                            initial={{ opacity: 0, display: "none" }}
+                            animate={{ opacity: 1, display: "flex" }}
+                            exit={{ opacity: 0, transitionEnd: { display: "none" } }}
+                            className="items-center"
                         >
-                            <PanelLeft size={18} className="text-white" />
-                        </button>
-                    </div>
-                )}
-                
-                {!isCollapsed && (
-                    <button
-                        onClick={() => setIsCollapsed(true)}
-                        className="z-50 shrink-0 flex items-center justify-center transition-all duration-300 text-zinc-500 hover:text-white w-8 h-8 rounded-[10px] bg-[#1a1a1c] border border-white/5 hover:bg-white/10"
-                    >
+                            <span className="text-sm font-black text-white tracking-widest uppercase">Code Logs</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <button
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className={cn(
+                        "z-50 flex items-center justify-center transition-all duration-300 text-white hover:text-white group",
+                        isCollapsed ? "w-8 h-8 mx-auto" : "w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10"
+                    )}
+                >
+                    {isCollapsed ? (
+                        <ChevronsRight size={18} strokeWidth={1.5} className="text-zinc-400 hover:text-white" />
+                    ) : (
                         <ChevronsLeft size={16} strokeWidth={2} />
-                    </button>
-                )}
+                    )}
+                </button>
             </div>
 
             {/* Sidebar Actions */}
@@ -381,7 +383,13 @@ const Sidebar = () => {
                     </div>
                 )}
             </div>
-
+            {/* Footer: Profile tile */}
+            <div className={cn(
+                "border-t border-white/5 bg-[#0c0c0e]/80 backdrop-blur-md transition-all duration-300",
+                isCollapsed ? "p-2" : "p-3"
+            )}>
+                <ProfileTile isCollapsed={isCollapsed} />
+            </div>
 
         </motion.aside>
     );
