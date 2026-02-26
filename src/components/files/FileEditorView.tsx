@@ -102,7 +102,7 @@ const FileEditorView = () => {
                     />
                 </div>
 
-                <div className="flex items-center gap-2 relative">
+                <div className="flex items-center gap-4 relative">
                     <button
                         onClick={() => console.log('Share clicked')}
                         title="Share Note"

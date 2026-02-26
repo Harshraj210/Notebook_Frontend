@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Brain, FileText, Sparkles, Plus, ChevronDown, Mic, ArrowRight, Copy, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { X, Send, Brain, FileText, Sparkles, Plus, ChevronDown, Mic, ArrowRight, Copy, ThumbsUp, ThumbsDown, Check } from 'lucide-react';
 import { useAIStore } from '@/store/useAIStore';
 import { cn } from '@/lib/utils';
 
@@ -106,6 +106,8 @@ const ChatView = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [copiedId, setCopiedId] = useState<number | null>(null);
     const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
+    const [feedbackCompleted, setFeedbackCompleted] = useState<Record<number, boolean>>({});
+    const [floatingIcons, setFloatingIcons] = useState<{ id: number; msgIdx: number; icon: string }[]>([]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -122,7 +124,14 @@ const ChatView = () => {
     };
 
     const handleFeedback = (idx: number, type: 'up' | 'down') => {
+        if (feedbackCompleted[idx]) return; // Prevent double clicks
         setFeedback(prev => ({ ...prev, [idx]: type }));
+        const id = Date.now();
+        setFloatingIcons(prev => [...prev, { id, msgIdx: idx, icon: type === 'up' ? '👍' : '👎' }]);
+        setTimeout(() => {
+            setFloatingIcons(prev => prev.filter(icon => icon.id !== id));
+            setFeedbackCompleted(prev => ({ ...prev, [idx]: true }));
+        }, 600);
     };
 
     const handleSend = () => {
@@ -143,6 +152,16 @@ const ChatView = () => {
 
     return (
         <div className="flex flex-col h-full">
+            <style>{`
+                @keyframes floatIcon {
+                    0% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+                    50% { transform: translate(-50%, -15px) scale(1.4); opacity: 0.8; }
+                    100% { transform: translate(-50%, -30px) scale(0); opacity: 0; }
+                }
+                .animate-float-icon {
+                    animation: floatIcon 600ms ease-out forwards;
+                }
+            `}</style>
             <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in duration-500 mt-10">
@@ -165,32 +184,50 @@ const ChatView = () => {
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-none ml-2">
                                     <button
                                         onClick={() => handleCopy(msg.content, idx)}
-                                        className="p-1 rounded-sm text-zinc-500 hover:text-white transition-colors flex items-center gap-1"
+                                        className="p-1 rounded-sm text-zinc-500 hover:text-white transition-colors relative flex items-center justify-center"
                                         title="Copy"
                                     >
-                                        <Copy size={16} />
-                                        {copiedId === idx && <span className="text-[10px] font-medium tracking-wide">Copied!</span>}
-                                    </button>
-                                    <button
-                                        onClick={() => handleFeedback(idx, 'up')}
-                                        className={cn(
-                                            "p-1 rounded-sm transition-colors",
-                                            feedback[idx] === 'up' ? "text-green-500" : "text-zinc-500 hover:text-green-500"
+                                        {copiedId === idx ? (
+                                            <Check size={16} className="text-white animate-in zoom-in-75 duration-200" />
+                                        ) : (
+                                            <Copy size={16} className="animate-in zoom-in-95 duration-200" />
                                         )}
-                                        title="Helpful"
-                                    >
-                                        <ThumbsUp size={16} className={cn(feedback[idx] === 'up' && "fill-green-500/20")} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleFeedback(idx, 'down')}
-                                        className={cn(
-                                            "p-1 rounded-sm transition-colors",
-                                            feedback[idx] === 'down' ? "text-red-500" : "text-zinc-500 hover:text-red-500"
+                                        {copiedId === idx && (
+                                            <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] px-2 py-0.5 rounded shadow-md pointer-events-none whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200 z-10">
+                                                Copied!
+                                            </span>
                                         )}
-                                        title="Not Helpful"
-                                    >
-                                        <ThumbsDown size={16} className={cn(feedback[idx] === 'down' && "fill-red-500/20")} />
                                     </button>
+                                    {!feedbackCompleted[idx] && (
+                                        <>
+                                            <button
+                                                onClick={() => handleFeedback(idx, 'up')}
+                                                className={cn(
+                                                    "p-1 rounded-sm transition-colors relative",
+                                                    feedback[idx] === 'up' ? "text-green-500" : "text-zinc-500 hover:text-green-500"
+                                                )}
+                                                title="Helpful"
+                                            >
+                                                <ThumbsUp size={16} className={cn(feedback[idx] === 'up' && "fill-green-500/20")} />
+                                                {floatingIcons.map(f => f.msgIdx === idx && f.icon === '👍' && (
+                                                    <span key={f.id} className="absolute left-1/2 top-0 pointer-events-none animate-float-icon text-base">👍</span>
+                                                ))}
+                                            </button>
+                                            <button
+                                                onClick={() => handleFeedback(idx, 'down')}
+                                                className={cn(
+                                                    "p-1 rounded-sm transition-colors relative",
+                                                    feedback[idx] === 'down' ? "text-red-500" : "text-zinc-500 hover:text-red-500"
+                                                )}
+                                                title="Not Helpful"
+                                            >
+                                                <ThumbsDown size={16} className={cn(feedback[idx] === 'down' && "fill-red-500/20")} />
+                                                {floatingIcons.map(f => f.msgIdx === idx && f.icon === '👎' && (
+                                                    <span key={f.id} className="absolute left-1/2 top-0 pointer-events-none animate-float-icon text-base">👎</span>
+                                                ))}
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         )}
