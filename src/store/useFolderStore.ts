@@ -8,6 +8,7 @@ export type NoteFile = {
     content: string;
     createdAt: string;
     updatedAt: string;
+    pinned?: boolean;
 };
 
 export type Folder = {
@@ -28,6 +29,9 @@ interface FolderState {
     openFolder: (id: string) => void;
     closeFolder: () => void;
     addFileToFolder: (folderId: string, file: NoteFile) => void;
+    toggleFolderFilePin: (folderId: string, fileId: string) => void;
+    updateFolderFileTitle: (folderId: string, fileId: string, title: string) => void;
+    deleteFolderFile: (folderId: string, fileId: string) => void;
 }
 
 export const useFolderStore = create<FolderState>()(
@@ -69,6 +73,50 @@ export const useFolderStore = create<FolderState>()(
                     folders: state.folders.map((f) =>
                         f.id === folderId
                             ? { ...f, files: [...f.files, file] }
+                            : f
+                    ),
+                }));
+            },
+
+            toggleFolderFilePin: (folderId, fileId) => {
+                set((state) => ({
+                    folders: state.folders.map((f) =>
+                        f.id === folderId
+                            ? {
+                                  ...f,
+                                  files: f.files.map((file) =>
+                                      file.id === fileId
+                                          ? { ...file, pinned: !file.pinned }
+                                          : file
+                                  ),
+                              }
+                            : f
+                    ),
+                }));
+            },
+
+            updateFolderFileTitle: (folderId, fileId, title) => {
+                set((state) => ({
+                    folders: state.folders.map((f) =>
+                        f.id === folderId
+                            ? {
+                                  ...f,
+                                  files: f.files.map((file) =>
+                                      file.id === fileId
+                                          ? { ...file, title, updatedAt: new Date().toISOString() }
+                                          : file
+                                  ),
+                              }
+                            : f
+                    ),
+                }));
+            },
+
+            deleteFolderFile: (folderId, fileId) => {
+                set((state) => ({
+                    folders: state.folders.map((f) =>
+                        f.id === folderId
+                            ? { ...f, files: f.files.filter((file) => file.id !== fileId) }
                             : f
                     ),
                 }));

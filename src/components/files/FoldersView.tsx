@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 
 const FoldersView = () => {
     // Desktop: use store. Mobile: use store.
-    const { folders, activeFolderId, createFolder, openFolder, closeFolder, renameFolder, deleteFolder, addFileToFolder } = useFolderStore();
+    const { folders, activeFolderId, createFolder, openFolder, closeFolder, renameFolder, deleteFolder, addFileToFolder, toggleFolderFilePin, deleteFolderFile, updateFolderFileTitle } = useFolderStore();
 
     const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null);
     const [isDeletingId, setIsDeletingId] = React.useState<string | null>(null);
@@ -58,14 +58,15 @@ const FoldersView = () => {
                                 key={file.id}
                                 filename={file.title}
                                 lastModified={new Date(file.updatedAt).toLocaleDateString()}
+                                isPinned={file.pinned}
                                 onRename={() => {
-                                    const newName = prompt("Enter new filename", file.title);
-                                    if (newName) renameFolder(activeFolder.id, newName); // Using folder rename logic as placeholder or if it handles files
+                                    const newName = prompt('Rename file', file.title);
+                                    if (newName && newName.trim()) {
+                                        updateFolderFileTitle(activeFolder.id, file.id, newName.trim());
+                                    }
                                 }}
-                                onDelete={() => {
-                                    // Placeholder for file delete logic
-                                    console.log("Delete file", file.id);
-                                }}
+                                onPin={() => toggleFolderFilePin(activeFolder.id, file.id)}
+                                onDelete={() => deleteFolderFile(activeFolder.id, file.id)}
                             />
                         ))
                     ) : (

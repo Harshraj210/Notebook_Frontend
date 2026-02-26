@@ -27,7 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const Sidebar = () => {
     const { workspaces, activeWorkspaceId, setActiveNoteId, activeNoteId } = useNotebookStore();
-    const { openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview } = useFileStore();
+    const { files, openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview, selectFile, toggleFilePin } = useFileStore();
     const { folders, openFolder, createFolder } = useFolderStore();
 
     // Search State
@@ -99,20 +99,18 @@ const Sidebar = () => {
     // View state: 'default' (folders) | 'files' are handled by useFileStore's isOverviewOpen now effectively
     const [isCollapsed, setIsCollapsed] = React.useState(false);
 
+    // ── Pinned: single source of truth from both stores ──────────────────────
+    // Root-level pinned files (from useFileStore)
+    const pinnedRootFiles = files.filter((f) => f.pinned);
+    // Folder-level pinned files (from useFolderStore)
+    const pinnedFolderFiles = folders.flatMap((folder) =>
+        folder.files.filter((f) => f.pinned).map((f) => ({ ...f, _folderName: folder.name, _folderId: folder.id }))
+    );
+    const hasPinned = pinnedRootFiles.length > 0 || pinnedFolderFiles.length > 0;
+
+    // Legacy notebook pinned (keep for backwards compat if library section uses it)
     const activeWorkspace = workspaces.find(ws => ws.id === activeWorkspaceId);
     const items = activeWorkspace?.folders || [];
-
-    // Pinned items extraction
-    const getPinnedItems = (items: NotebookItem[]): NotebookItem[] => {
-        let pinned: NotebookItem[] = [];
-        items.forEach(item => {
-            if (item.isPinned) pinned.push(item);
-            if (item.children) pinned = [...pinned, ...getPinnedItems(item.children)];
-        });
-        return pinned;
-    };
-
-    const pinnedItems = getPinnedItems(items);
 
     const SidebarItem = ({ icon: Icon, label, onClick, isActive }: { icon: any, label: string, onClick?: () => void, isActive?: boolean }) => (
         <Tooltip.Provider delayDuration={0}>
@@ -297,8 +295,8 @@ const Sidebar = () => {
 
                 {!isCollapsed && (
                     <div className="space-y-6">
-                        {/* Pinned Section */}
-                        {pinnedItems.length > 0 && (
+                        {/* Pinned Section — reads from useFileStore + useFolderStore */}
+                        {hasPinned && (
                             <div className="overflow-hidden">
                                 <div className="mb-2 flex items-center gap-2 px-4">
                                     <span className="text-zinc-500 shrink-0">
@@ -317,9 +315,46 @@ const Sidebar = () => {
                                         )}
                                     </AnimatePresence>
                                 </div>
-                                {pinnedItems.map(item => (
-                                    <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
+
+                                {/* Root-level pinned files */}
+                                {pinnedRootFiles.map((file) => (
+                                    <div
+                                        key={`pin-root-${file.id}`}
+                                        onClick={() => selectFile(file.id)}
+                                        className="flex items-center gap-2 w-full px-4 py-1.5 text-left hover:bg-zinc-800/50 rounded-lg transition-colors group/pin cursor-pointer"
+                                    >
+                                        <FileText size={12} className="text-cyan-500 shrink-0" />
+                                        <span className="text-xs text-zinc-300 truncate flex-1 font-medium">
+                                            {file.title}
+                                        </span>
+                                        <span
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={(e) => { e.stopPropagation(); toggleFilePin(file.id); }}
+                                            onKeyDown={(e) => e.key === 'Enter' && toggleFilePin(file.id)}
+                                            className="opacity-0 group-hover/pin:opacity-100 text-zinc-600 hover:text-zinc-300 transition-all cursor-pointer p-0.5 rounded"
+                                            title="Unpin"
+                                        >
+                                            <Pin size={10} className="rotate-45" />
+                                        </span>
+                                    </div>
                                 ))}
+
+                                {/* Folder-level pinned files */}
+                                {pinnedFolderFiles.map((file) => (
+                                    <div
+                                        key={`pin-folder-${file.id}`}
+                                        onClick={() => { openFolders(); openFolder(file._folderId); }}
+                                        className="flex items-center gap-2 w-full px-4 py-1.5 text-left hover:bg-zinc-800/50 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                        <FileText size={12} className="text-indigo-400 shrink-0" />
+                                        <span className="text-xs text-zinc-300 truncate flex-1 font-medium">
+                                            {file.title}
+                                        </span>
+                                        <span className="text-[9px] text-zinc-600 truncate max-w-[50px]">{file._folderName}</span>
+                                    </div>
+                                ))}
+
                             </div>
                         )}
 
