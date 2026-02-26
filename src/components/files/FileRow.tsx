@@ -1,14 +1,16 @@
 "use client";
 
 import React from 'react';
-import { FileText, FileCode, File, MoreVertical, Trash2, Edit2 } from 'lucide-react';
+import { FileText, FileCode, File, MoreVertical, Trash2, Edit2, Pin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface FileRowProps {
     filename: string;
     lastModified: string;
+    isPinned?: boolean;
     onRename?: () => void;
     onDelete?: () => void;
+    onPin?: () => void;
     onClick?: () => void;
 }
 
@@ -29,7 +31,7 @@ const getFileIcon = (filename: string) => {
     }
 };
 
-const FileRow = ({ filename, lastModified, onRename, onDelete, onClick }: FileRowProps) => {
+const FileRow = ({ filename, lastModified, isPinned, onRename, onDelete, onPin, onClick }: FileRowProps) => {
     const [showActions, setShowActions] = React.useState(false);
 
     return (
@@ -88,6 +90,17 @@ const FileRow = ({ filename, lastModified, onRename, onDelete, onClick }: FileRo
                                     >
                                         <Edit2 size={12} />
                                         Rename
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onPin?.();
+                                            setShowActions(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                                    >
+                                        <Pin size={12} className={isPinned ? 'text-cyan-400 rotate-45' : ''} />
+                                        {isPinned ? 'Unpin' : 'Pin'}
                                     </button>
                                     <button
                                         onClick={(e) => {

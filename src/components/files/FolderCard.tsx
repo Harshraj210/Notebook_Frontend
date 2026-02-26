@@ -18,7 +18,20 @@ const FolderCard = ({ name, fileCount, onClick, onRename, onDelete, onDeleteRequ
     const [isEditing, setIsEditing] = React.useState(false);
     const [isDeletingLocal, setIsDeletingLocal] = React.useState(false);
     const [tempName, setTempName] = React.useState(name);
+    const [showMenu, setShowMenu] = React.useState(false); // New State
     const inputRef = React.useRef<HTMLInputElement>(null);
+    const menuRef = React.useRef<HTMLDivElement>(null); // New Ref
+
+    // Close menu on outside click
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Sync prop state to local for animation
     React.useEffect(() => {
@@ -70,6 +83,8 @@ const FolderCard = ({ name, fileCount, onClick, onRename, onDelete, onDeleteRequ
             onClick={(e) => {
                 // If editing or deleting, don't trigger navigation
                 if (isEditing || isAnimatingDelete) return;
+                // If clicking menu, don't nav
+                if (showMenu) return; 
                 onClick?.();
             }}
             variants={{

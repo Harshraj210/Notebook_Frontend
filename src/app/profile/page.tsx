@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import ProfileHeader from '@/components/profile/ProfileHeader';
@@ -8,61 +8,62 @@ import QuickStats from '@/components/profile/QuickStats';
 import CodePulseHeatmap from '@/components/profile/CodePulseHeatmap';
 import TopicTree from '@/components/profile/TopicTree';
 import WeakAreas from '@/components/profile/WeakAreas';
-import { mockProfileData, ProfileState } from '@/data/mockProfileData';
-
 import { useUserStore } from '@/store/useUserStore';
+import { useProfileStore } from '@/store/useProfileStore';
 
 export default function ProfilePage() {
   const { name, tagline, updateProfile } = useUserStore();
-  const [profile, setProfile] = useState<ProfileState | null>(null);
-
-  useEffect(() => {
-    // Load rest of profile from mock (activity, topics)
-    // Name/Tagline are now managed by useUserStore
-    setProfile(mockProfileData);
-  }, []);
+  const { topics, activity } = useProfileStore();
 
   const handleUpdateProfile = (newName: string, newTagline: string) => {
     updateProfile({ name: newName, tagline: newTagline });
   };
 
-  if (!profile) return <div className="p-8 text-zinc-500">Loading profile...</div>;
-
   return (
-    <div className="min-h-screen bg-[#111] text-zinc-100 p-4 md:p-8 lg:px-12 overflow-y-auto">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-4">
-             <Link href="/" className="inline-flex items-center justify-center p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full transition-all">
-                <ArrowLeft size={24} />
-             </Link>
+    <div className="min-h-screen bg-[#111] text-zinc-100 overflow-y-auto">
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-6">
+        {/* Back arrow */}
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-zinc-500 hover:text-white text-sm transition-colors group"
+          >
+            <ArrowLeft
+              size={16}
+              className="group-hover:-translate-x-0.5 transition-transform"
+            />
+            <span>Back</span>
+          </Link>
         </div>
 
-        <ProfileHeader 
-          name={name} 
-          tagline={tagline} 
-          onUpdate={handleUpdateProfile} 
+        {/* Profile Header */}
+        <ProfileHeader
+          name={name}
+          tagline={tagline}
+          onUpdate={handleUpdateProfile}
         />
-        
-        <QuickStats profile={profile} />
-        
-        <CodePulseHeatmap data={profile.activity} />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        {/* Stats Cards */}
+        <QuickStats topics={topics} activity={activity} />
+
+        {/* Activity Heatmap */}
+        <CodePulseHeatmap data={activity} />
+
+        {/* Learning Path + Weak Areas */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Topics tree: takes 2/3 */}
           <div className="lg:col-span-2">
-            <TopicTree topics={profile.topics} />
+            <TopicTree topics={topics} />
           </div>
+
+          {/* Weak Areas: takes 1/3 */}
           <div className="lg:col-span-1">
-             <div className="bg-zinc-900/30 rounded-xl p-4 border border-zinc-800/50 sticky top-4">
-                <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-4">Insights</h3>
-                <p className="text-zinc-500 text-sm mb-4 leading-relaxed">
-                    You're doing great! Keep focusing on <span className="text-indigo-400 font-medium">React</span> and <span className="text-indigo-400 font-medium">Node.js</span> to level up your full-stack skills.
-                </p>
-                <WeakAreas topics={profile.topics} />
-             </div>
+            <WeakAreas topics={topics} />
           </div>
         </div>
 
-        <div className="h-20" /> {/* Spacer */}
+        {/* Bottom spacer */}
+        <div className="h-16" />
       </div>
     </div>
   );

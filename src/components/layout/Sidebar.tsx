@@ -15,6 +15,7 @@ import {
     Plus,
     PanelLeft,
     ChevronsRight,
+    ChevronsLeft,
     Settings,
     HelpCircle,
     Layout,
@@ -26,7 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const Sidebar = () => {
     const { workspaces, activeWorkspaceId, setActiveNoteId, activeNoteId } = useNotebookStore();
-    const { openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview } = useFileStore();
+    const { files, openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview, selectFile, toggleFilePin } = useFileStore();
     const { folders, openFolder, createFolder } = useFolderStore();
 
     // Search State
@@ -98,20 +99,18 @@ const Sidebar = () => {
     // View state: 'default' (folders) | 'files' are handled by useFileStore's isOverviewOpen now effectively
     const [isCollapsed, setIsCollapsed] = React.useState(false);
 
+    // ── Pinned: single source of truth from both stores ──────────────────────
+    // Root-level pinned files (from useFileStore)
+    const pinnedRootFiles = files.filter((f) => f.pinned);
+    // Folder-level pinned files (from useFolderStore)
+    const pinnedFolderFiles = folders.flatMap((folder) =>
+        folder.files.filter((f) => f.pinned).map((f) => ({ ...f, _folderName: folder.name, _folderId: folder.id }))
+    );
+    const hasPinned = pinnedRootFiles.length > 0 || pinnedFolderFiles.length > 0;
+
+    // Legacy notebook pinned (keep for backwards compat if library section uses it)
     const activeWorkspace = workspaces.find(ws => ws.id === activeWorkspaceId);
     const items = activeWorkspace?.folders || [];
-
-    // Pinned items extraction
-    const getPinnedItems = (items: NotebookItem[]): NotebookItem[] => {
-        let pinned: NotebookItem[] = [];
-        items.forEach(item => {
-            if (item.isPinned) pinned.push(item);
-            if (item.children) pinned = [...pinned, ...getPinnedItems(item.children)];
-        });
-        return pinned;
-    };
-
-    const pinnedItems = getPinnedItems(items);
 
     const SidebarItem = ({ icon: Icon, label, onClick, isActive }: { icon: any, label: string, onClick?: () => void, isActive?: boolean }) => (
         <Tooltip.Provider delayDuration={0}>
@@ -197,38 +196,36 @@ const Sidebar = () => {
                 "h-screen bg-[#0c0c0e] border-r border-white/12 flex flex-col font-sans select-none overflow-visible relative z-40"
             )}
         >
-            {/* Header: Branding & Toggle */}
+            {/* Header: User Profile & Toggle */}
             <div className={cn(
                 "flex items-center min-h-[64px] transition-all duration-300 relative",
-                isCollapsed ? "justify-center" : "justify-between pl-5 pr-2.5"
+                isCollapsed ? "justify-center pt-2" : "justify-between pl-3 pr-3 pt-3 pb-1 gap-2"
             )}>
-                <AnimatePresence>
-                    {!isCollapsed && (
-                        <motion.div
-                            key="expanded-logo"
-                            initial={{ opacity: 0, display: "none" }}
-                            animate={{ opacity: 1, display: "flex" }}
-                            exit={{ opacity: 0, transitionEnd: { display: "none" } }}
-                            className="items-center"
+                {!isCollapsed && (
+                    <div className="flex-1 min-w-0">
+                        <ProfileTile isCollapsed={isCollapsed} />
+                    </div>
+                )}
+                {isCollapsed && (
+                    <div className="w-full flex items-center justify-center relative">
+                        <ProfileTile isCollapsed={isCollapsed} />
+                        <button
+                            onClick={() => setIsCollapsed(false)}
+                            className="absolute inset-0 z-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/60 rounded-xl"
                         >
-                            <span className="text-sm font-black text-white tracking-widest uppercase">Code Logs</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    className={cn(
-                        "z-50 flex items-center justify-center transition-all duration-300 text-white hover:text-white group",
-                        isCollapsed ? "w-8 h-8 mx-auto" : "w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10"
-                    )}
-                >
-                    {isCollapsed ? (
-                        <ChevronsRight size={18} strokeWidth={1.5} className="text-zinc-400 hover:text-white" />
-                    ) : (
-                        <PanelLeft size={18} strokeWidth={1.5} />
-                    )}
-                </button>
+                            <PanelLeft size={18} className="text-white" />
+                        </button>
+                    </div>
+                )}
+                
+                {!isCollapsed && (
+                    <button
+                        onClick={() => setIsCollapsed(true)}
+                        className="z-50 shrink-0 flex items-center justify-center transition-all duration-300 text-zinc-500 hover:text-white w-8 h-8 rounded-[10px] bg-[#1a1a1c] border border-white/5 hover:bg-white/10"
+                    >
+                        <ChevronsLeft size={16} strokeWidth={2} />
+                    </button>
+                )}
             </div>
 
             {/* Sidebar Actions */}
@@ -298,8 +295,8 @@ const Sidebar = () => {
 
                 {!isCollapsed && (
                     <div className="space-y-6">
-                        {/* Pinned Section */}
-                        {pinnedItems.length > 0 && (
+                        {/* Pinned Section — reads from useFileStore + useFolderStore */}
+                        {hasPinned && (
                             <div className="overflow-hidden">
                                 <div className="mb-2 flex items-center gap-2 px-4">
                                     <span className="text-zinc-500 shrink-0">
@@ -318,9 +315,46 @@ const Sidebar = () => {
                                         )}
                                     </AnimatePresence>
                                 </div>
-                                {pinnedItems.map(item => (
-                                    <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
+
+                                {/* Root-level pinned files */}
+                                {pinnedRootFiles.map((file) => (
+                                    <div
+                                        key={`pin-root-${file.id}`}
+                                        onClick={() => selectFile(file.id)}
+                                        className="flex items-center gap-2 w-full px-4 py-1.5 text-left hover:bg-zinc-800/50 rounded-lg transition-colors group/pin cursor-pointer"
+                                    >
+                                        <FileText size={12} className="text-cyan-500 shrink-0" />
+                                        <span className="text-xs text-zinc-300 truncate flex-1 font-medium">
+                                            {file.title}
+                                        </span>
+                                        <span
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={(e) => { e.stopPropagation(); toggleFilePin(file.id); }}
+                                            onKeyDown={(e) => e.key === 'Enter' && toggleFilePin(file.id)}
+                                            className="opacity-0 group-hover/pin:opacity-100 text-zinc-600 hover:text-zinc-300 transition-all cursor-pointer p-0.5 rounded"
+                                            title="Unpin"
+                                        >
+                                            <Pin size={10} className="rotate-45" />
+                                        </span>
+                                    </div>
                                 ))}
+
+                                {/* Folder-level pinned files */}
+                                {pinnedFolderFiles.map((file) => (
+                                    <div
+                                        key={`pin-folder-${file.id}`}
+                                        onClick={() => { openFolders(); openFolder(file._folderId); }}
+                                        className="flex items-center gap-2 w-full px-4 py-1.5 text-left hover:bg-zinc-800/50 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                        <FileText size={12} className="text-indigo-400 shrink-0" />
+                                        <span className="text-xs text-zinc-300 truncate flex-1 font-medium">
+                                            {file.title}
+                                        </span>
+                                        <span className="text-[9px] text-zinc-600 truncate max-w-[50px]">{file._folderName}</span>
+                                    </div>
+                                ))}
+
                             </div>
                         )}
 
@@ -348,15 +382,7 @@ const Sidebar = () => {
                 )}
             </div>
 
-            {/* Footer: User Profile */}
-            {!isCollapsed && (
-                <div className={cn(
-                    "mt-auto border-t border-white/12 bg-[#0c0c0e]/80 backdrop-blur-md transition-all duration-300",
-                    isCollapsed ? "p-2" : "p-3"
-                )}>
-                    <ProfileTile isCollapsed={isCollapsed} />
-                </div>
-            )}
+
         </motion.aside>
     );
 };

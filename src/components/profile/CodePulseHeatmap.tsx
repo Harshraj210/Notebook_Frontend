@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { ProfileState } from '@/data/mockProfileData';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
 type Props = {
-  data: ProfileState['activity'];
+  data: Record<string, number>;
 };
 
 const CodePulseHeatmap = ({ data }: Props) => {

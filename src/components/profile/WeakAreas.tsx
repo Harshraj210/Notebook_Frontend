@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Topic } from '@/data/mockProfileData';
@@ -8,37 +10,42 @@ type Props = {
 };
 
 const WeakAreas = ({ topics }: Props) => {
-  const weakTopics: Topic[] = [];
+  type WeakItem = { name: string; mastery: number };
+  const weakItems: WeakItem[] = [];
 
-  const findWeakTopics = (list: Topic[]) => {
-    list.forEach(t => {
-      if (t.children && t.children.length > 0) {
-        findWeakTopics(t.children);
-      } else {
-        if (t.rating <= 2) {
-          weakTopics.push(t);
-        }
+  topics.forEach((t) => {
+    t.subtopics.forEach((s) => {
+      if (s.mastery <= 2) {
+        weakItems.push({ name: s.name, mastery: s.mastery });
       }
     });
-  };
+  });
 
-  findWeakTopics(topics);
-  const displayTopics = weakTopics.slice(0, 5); // Max 5
+  const display = weakItems.slice(0, 5);
 
-  if (displayTopics.length === 0) return null;
+  if (display.length === 0) {
+    return (
+      <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-center">
+        <p className="text-xs text-emerald-400 font-medium">🎉 No weak areas!</p>
+        <p className="text-[11px] text-zinc-500 mt-1">All subtopics mastery is above 2.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 mt-6">
-      <h3 className="text-sm font-semibold text-red-200 mb-3 flex items-center gap-2">
+    <div className="p-5 bg-[#1a1a1a] border border-zinc-800/60 rounded-xl">
+      <h3 className="text-sm font-semibold text-zinc-300 flex items-center gap-2 mb-4">
         <AlertCircle size={14} className="text-red-400" />
         Focus Areas
       </h3>
       <div className="space-y-2">
-        {displayTopics.map((topic) => (
-          <div key={topic.id} className="flex items-center justify-between p-2 rounded bg-red-500/10 border border-transparent hover:bg-red-500/20 transition-colors cursor-pointer group">
-            <span className="text-sm text-red-100 group-hover:block hidden transition-all">Review Now</span>
-            <span className="text-sm text-zinc-300 group-hover:hidden transition-all">{topic.title}</span>
-            <ConfidenceStars rating={topic.rating} size={12} />
+        {display.map((item, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-between p-2.5 rounded-lg bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 transition-colors"
+          >
+            <span className="text-sm text-zinc-300">{item.name}</span>
+            <ConfidenceStars rating={item.mastery} size={12} />
           </div>
         ))}
       </div>
