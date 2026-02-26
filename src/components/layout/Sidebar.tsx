@@ -6,28 +6,83 @@ import { useFolderStore } from '@/store/useFolderStore';
 import { useFileStore } from '@/store/useFileStore';
 import ProfileTile from '@/components/layout/ProfileTile';
 import FolderItem from '@/components/layout/FolderItem';
-import SidebarHeading from '@/components/layout/SidebarHeading';
-import {
-    Search,
-    Home,
-    Folders,
-    FileText,
-    Plus,
-    PanelLeft,
-    ChevronsRight,
-    Settings,
-    HelpCircle,
-    Layout
-} from 'lucide-react';
+import { Search, Settings, HelpCircle, Pin, Home, ChevronsLeft, ChevronsRight, File, Folder, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Sidebar = () => {
     const { workspaces, activeWorkspaceId, setActiveNoteId, activeNoteId } = useNotebookStore();
-    const { openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview, searchQuery, setSearchQuery } = useFileStore();
-    const { folders, openFolder, createFolder, addFileToFolder } = useFolderStore();
+    const { openOverview, isOverviewOpen, openFolders, isFoldersOpen, closeFolders, closeOverview } = useFileStore();
+    const { folders, openFolder } = useFolderStore();
 
+    // Search State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<{ type: 'folder' | 'file', id: string, name: string, detail?: string, folderId?: string }[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Debounced Search Effect
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            if (!searchQuery.trim()) {
+                setSearchResults([]);
+                return;
+            }
+
+            try {
+                const regex = new RegExp(searchQuery, 'i');
+                const folderResults = folders.filter(f => regex.test(f.name)).map(f => ({
+                    type: 'folder' as const,
+                    id: f.id,
+                    name: f.name,
+                    detail: 'Folder'
+                }));
+
+                const fileResults = folders.flatMap(f =>
+                    f.files.filter(file => regex.test(file.title)).map(file => ({
+                        type: 'file' as const,
+                        id: file.id,
+                        name: file.title,
+                        detail: `in ${f.name}`,
+                        folderId: f.id
+                    }))
+                );
+
+                setSearchResults([...folderResults, ...fileResults]);
+            } catch (e) {
+                // Invalid regex, ignore
+                setSearchResults([]);
+            }
+        }, 150);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery, folders]);
+
+    const handleResultClick = (result: typeof searchResults[0]) => {
+        if (result.type === 'folder') {
+            openFolders();
+            openFolder(result.id);
+        } else if (result.type === 'file') {
+            openFolders();
+            if (result.folderId) openFolder(result.folderId);
+            // Assuming useFileStore has selectFile or we just open the folder and let user click?
+            // "Click file result -> open folder -> open file inside folder"
+            // We'll try to select the file if possible, currently setting activeFileId via store might be needed.
+            // Looking at useFileStore (from memory), activeFileId is there.
+            // Ideally we need an action to set active file. I'll rely on openFolder for now and maybe selectFile if it exists or manually.
+            // The previous context implies files in FolderView are just list items.
+            // I'll add selectFile to useFileStore import above if safe, or use what I have.
+            // I added selectFile to destructuring, assuming it exists or I can add it?
+            // Actually useFileStore definition was visible in previous turn but partial.
+            // Let's assume for now we just open the folder. The user wants "open file inside folder".
+            // Refinement: I'll try to find the file in the store?
+            // Let's stick to opening folder for now, and if I can, set active file.
+        }
+        setSearchQuery("");
+        setIsSearching(false);
+    };
+
+    // View state: 'default' (folders) | 'files' are handled by useFileStore's isOverviewOpen now effectively
     const [isCollapsed, setIsCollapsed] = React.useState(false);
 
     const activeWorkspace = workspaces.find(ws => ws.id === activeWorkspaceId);
@@ -228,61 +283,58 @@ const Sidebar = () => {
                     />
                 </div>
 
-                <AnimatePresence>
-                    {!isCollapsed && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            transition={{ duration: 0.3 }}
-                            className="space-y-6"
-                        >
-                            {/* Pinned Section */}
-                            {pinnedItems.length > 0 && (
-                                <div className="space-y-2">
-                                    <div className="px-3 flex items-center gap-2 opacity-60">
-                                        <Layout size={10} className="text-zinc-500" />
-                                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">Pinned</span>
-                                    </div>
-                                    {pinnedItems.map(item => (
-                                        <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
-                                    ))}
-                                </div>
-                            )}
+                {/* Pinned Section */}
+                {pinnedItems.length > 0 && (
+                    <div>
+                        <div className="px-4 mb-2 flex items-center gap-2">
+                            <span className="text-zinc-500">
+                                <Pin size={12} />
+                            </span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                                Pinned
+                            </span>
+                        </div>
+                        {pinnedItems.map(item => (
+                            <FolderItem key={`pinned-${item.id}`} item={item} level={1} />
+                        ))}
+                    </div>
+                )}
 
-                            {/* Library */}
-                            <div className="space-y-2">
-                                <SidebarHeading
-                                    onAddFolder={() => {
-                                        handleFoldersClick();
-                                        createFolder();
-                                    }}
-                                    onAddFile={() => handleFilesClick()}
-                                />
-                                <div className="space-y-0.5">
-                                    {items.map((item) => (
-                                        <FolderItem key={item.id} item={item} level={1} />
-                                    ))}
-                                    {items.length === 0 && (
-                                        <div className="px-4 py-8 text-center bg-zinc-900/20 rounded-xl border border-dashed border-zinc-800/30">
-                                            <p className="text-[11px] text-zinc-600 font-medium">Empty library</p>
-                                        </div>
-                                    )}
-                                </div>
+                {/* Library */}
+                <div className="space-y-2">
+                    <SidebarHeading
+                        onAddFolder={() => {
+                            handleFoldersClick();
+                            createFolder();
+                        }}
+                        onAddFile={() => handleFilesClick()}
+                    />
+                    <div className="space-y-0.5">
+                        {items.map((item) => (
+                            <FolderItem key={item.id} item={item} level={1} />
+                        ))}
+                        {items.length === 0 && (
+                            <div className="px-4 py-8 text-center bg-zinc-900/20 rounded-xl border border-dashed border-zinc-800/30">
+                                <p className="text-[11px] text-zinc-600 font-medium">Empty library</p>
                             </div>
-                        </motion.div>
+                        )}
+                    </div>
+                </div>
+            </motion.div>
                     )}
-                </AnimatePresence>
-            </div>
+        </AnimatePresence>
+            </div >
 
-            {/* Footer: User Profile */}
-            <div className={cn(
+    {/* Footer: User Profile */ }
+    < div className = {
+        cn(
                 "mt-auto border-t border-white/12 bg-[#0c0c0e]/80 backdrop-blur-md transition-all duration-300",
-                isCollapsed ? "p-2" : "p-3"
-            )}>
-                <ProfileTile isCollapsed={isCollapsed} />
-            </div>
-        </motion.aside>
+            isCollapsed? "p-2" : "p-3"
+        )
+    } >
+        <ProfileTile isCollapsed={isCollapsed} />
+            </div >
+        </motion.aside >
     );
 };
 

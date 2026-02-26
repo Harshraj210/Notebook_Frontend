@@ -28,7 +28,10 @@ const FileEditorView = () => {
                         value={activeFile.title}
                         onChange={(e) => updateFileTitle(activeFile.id, e.target.value)}
                         placeholder="Untitled Note"
-                        className="font-bold text-lg bg-transparent border-none focus:outline-none focus:ring-0 text-zinc-100 placeholder-zinc-500 w-full"
+                        autoComplete="off"
+                        spellCheck={false}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-bold text-lg bg-transparent border-none focus:outline-none focus:ring-0 text-zinc-100 placeholder-zinc-500 w-full cursor-text"
                     />
                  </div>
 

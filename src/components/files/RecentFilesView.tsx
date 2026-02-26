@@ -2,9 +2,19 @@ import React from 'react';
 import { useFileStore } from '@/store/useFileStore';
 import { Plus, Grip, Calendar, MoreVertical, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import FileCard from './FileCard';
 
 const RecentFilesView = () => {
-    const { files, selectFile, createFile } = useFileStore();
+    const { files, selectFile, createFile, updateFileTitle, deleteFile, toggleFilePin } = useFileStore();
+    const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null);
+
+    const handleDeleteConfirm = () => {
+        if (deleteTargetId) {
+            deleteFile(deleteTargetId);
+            setDeleteTargetId(null);
+        }
+    };
+
 
     return (
         <div className="flex flex-col h-full bg-[#0c0c0e] text-zinc-100 p-8 relative">
@@ -33,34 +43,14 @@ const RecentFilesView = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {/* Card */}
                 {files.map(file => (
-                    <div
+                    <FileCard
                         key={file.id}
+                        file={file}
                         onClick={() => selectFile(file.id)}
-                        className="group flex flex-col gap-3 cursor-pointer"
-                    >
-                        {/* Thumbnail */}
-                        <div className="aspect-3/4 bg-zinc-900/50 rounded-2xl border border-zinc-800 group-hover:border-zinc-700 transition-all flex items-center justify-center relative overflow-hidden">
-                            <div className="absolute inset-0 bg-linear-to-tr from-zinc-900 via-transparent to-transparent opacity-50" />
-                            <FileText size={48} className="text-zinc-700 group-hover:text-zinc-600 transition-colors" opacity={0.5} />
-
-                            {/* Content Preview (Visual fluff) */}
-                            {file.content ? (
-                                <div className="absolute inset-4 text-[6px] text-zinc-600 overflow-hidden leading-relaxed opacity-30 select-none pointer-events-none">
-                                    {file.content.slice(0, 500)}
-                                </div>
-                            ) : (
-                                <span className="absolute bottom-1/2 translate-y-8 text-[10px] text-zinc-600 italic">No content</span>
-                            )}
-                        </div>
-
-                        {/* Meta */}
-                        <div className="flex flex-col gap-1 px-1">
-                            <h3 className="font-bold text-zinc-200 truncate group-hover:text-cyan-400 transition-colors">{file.title}</h3>
-                            <span className="text-[10px] text-zinc-500 font-bold tracking-wider uppercase">
-                                {new Date(file.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </span>
-                        </div>
-                    </div>
+                        onRename={(newName) => updateFileTitle(file.id, newName)}
+                        onDeleteRequest={() => setDeleteTargetId(file.id)}
+                        onPin={() => toggleFilePin(file.id)}
+                    />
                 ))}
 
                 {files.length === 0 && (
@@ -78,6 +68,32 @@ const RecentFilesView = () => {
             >
                 <Plus size={28} className="text-white group-hover:scale-110 transition-transform duration-300" strokeWidth={2.5} />
             </button>
+
+            {/* Delete Confirmation Modal */}
+            {deleteTargetId && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-[#18181b] border border-zinc-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full animate-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold text-zinc-100 mb-2">Delete File?</h3>
+                        <p className="text-zinc-400 text-sm mb-6">
+                            Are you sure you want to delete this file? This action cannot be undone.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setDeleteTargetId(null)}
+                                className="px-4 py-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors text-sm font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteConfirm}
+                                className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors text-sm font-medium border border-red-500/20"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
