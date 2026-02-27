@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useNotebookStore, NotebookItem } from '@/store/useNotebookStore';
 import { useFolderStore } from '@/store/useFolderStore';
@@ -13,6 +13,7 @@ import {
     Home,
     Folders,
     FileText,
+    FolderOpen,
     Plus,
     PanelLeft,
     ChevronsRight,
@@ -34,71 +35,111 @@ const Sidebar = () => {
     const router = useRouter();
     const pathname = usePathname();
 
-    // Search State
-    const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState<{ type: 'folder' | 'file', id: string, name: string, detail?: string, folderId?: string }[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
+    // ── Smart Search ──────────────────────────────────────────────────────────
+    type SearchResult =
+        | { type: 'folder'; id: string; label: string }
+        | { type: 'root-file'; id: string; label: string }
+        | { type: 'folder-file'; id: string; label: string; folderId: string; folderName: string };
 
-    // Debounced Search Effect
-    React.useEffect(() => {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(-1);
+    const searchRef = useRef<HTMLDivElement>(null);
+
+    // Debounced search across all 3 sources
+    useEffect(() => {
         const timer = setTimeout(() => {
-            if (!searchQuery.trim()) {
+            const q = searchQuery.trim();
+            if (!q) {
+                setSearchResults([]);
+                setSearchOpen(false);
+                setActiveIndex(-1);
+                return;
+            }
+            let regex: RegExp;
+            try {
+                regex = new RegExp(q, 'i');
+            } catch {
                 setSearchResults([]);
                 return;
             }
 
-            try {
-                const regex = new RegExp(searchQuery, 'i');
-                const folderResults = folders.filter(f => regex.test(f.name)).map(f => ({
-                    type: 'folder' as const,
-                    id: f.id,
-                    name: f.name,
-                    detail: 'Folder'
-                }));
+            const folderMatches: SearchResult[] = folders
+                .filter(f => regex.test(f.name))
+                .map(f => ({ type: 'folder', id: f.id, label: f.name }));
 
-                const fileResults = folders.flatMap(f =>
-                    f.files.filter(file => regex.test(file.title)).map(file => ({
-                        type: 'file' as const,
+            const rootFileMatches: SearchResult[] = files
+                .filter(f => regex.test(f.title))
+                .map(f => ({ type: 'root-file', id: f.id, label: f.title }));
+
+            const folderFileMatches: SearchResult[] = folders.flatMap(f =>
+                f.files
+                    .filter(file => regex.test(file.title))
+                    .map(file => ({
+                        type: 'folder-file' as const,
                         id: file.id,
-                        name: file.title,
-                        detail: `in ${f.name}`,
-                        folderId: f.id
+                        label: file.title,
+                        folderId: f.id,
+                        folderName: f.name,
                     }))
-                );
+            );
 
-                setSearchResults([...folderResults, ...fileResults]);
-            } catch (e) {
-                // Invalid regex, ignore
-                setSearchResults([]);
-            }
+            const merged = [...folderMatches, ...rootFileMatches, ...folderFileMatches].slice(0, 15);
+            setSearchResults(merged);
+            setSearchOpen(merged.length > 0 || q.length > 0); // open regardless to show "no results"
+            setActiveIndex(-1);
         }, 150);
-
         return () => clearTimeout(timer);
-    }, [searchQuery, folders]);
+    }, [searchQuery, files, folders]);
 
-    const handleResultClick = (result: typeof searchResults[0]) => {
+    // Click-outside to close dropdown
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setSearchOpen(false);
+                setActiveIndex(-1);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const closeSearch = useCallback(() => {
+        setSearchQuery('');
+        setSearchResults([]);
+        setSearchOpen(false);
+        setActiveIndex(-1);
+    }, []);
+
+    const handleResultClick = useCallback((result: SearchResult) => {
         if (result.type === 'folder') {
             openFolders();
             openFolder(result.id);
-        } else if (result.type === 'file') {
+        } else if (result.type === 'root-file') {
+            selectFile(result.id);
+        } else {
             openFolders();
-            if (result.folderId) openFolder(result.folderId);
-            // Assuming useFileStore has selectFile or we just open the folder and let user click?
-            // "Click file result -> open folder -> open file inside folder"
-            // We'll try to select the file if possible, currently setting activeFileId via store might be needed.
-            // Looking at useFileStore (from memory), activeFileId is there.
-            // Ideally we need an action to set active file. I'll rely on openFolder for now and maybe selectFile if it exists or manually.
-            // The previous context implies files in FolderView are just list items.
-            // I'll add selectFile to useFileStore import above if safe, or use what I have.
-            // I added selectFile to destructuring, assuming it exists or I can add it?
-            // Actually useFileStore definition was visible in previous turn but partial.
-            // Let's assume for now we just open the folder. The user wants "open file inside folder".
-            // Refinement: I'll try to find the file in the store?
-            // Let's stick to opening folder for now, and if I can, set active file.
+            openFolder(result.folderId);
         }
-        setSearchQuery("");
-        setIsSearching(false);
-    };
+        closeSearch();
+    }, [openFolders, openFolder, selectFile, closeSearch]);
+
+    const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!searchOpen) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActiveIndex(i => Math.min(i + 1, searchResults.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActiveIndex(i => Math.max(i - 1, 0));
+        } else if (e.key === 'Enter' && activeIndex >= 0) {
+            e.preventDefault();
+            handleResultClick(searchResults[activeIndex]);
+        } else if (e.key === 'Escape') {
+            closeSearch();
+        }
+    }, [searchOpen, searchResults, activeIndex, handleResultClick, closeSearch]);
 
     // View state: 'default' (folders) | 'files' are handled by useFileStore's isOverviewOpen now effectively
     const [isCollapsed, setIsCollapsed] = React.useState(false);
@@ -241,38 +282,113 @@ const Sidebar = () => {
             {/* Sidebar Actions */}
             <div className="space-y-1.5 relative z-50">
                 {/* Search Widget */}
-                <div className={cn(
-                    "flex items-center w-full rounded-lg text-xs h-9 relative border border-white/8 transition-[width,background-color] duration-300",
-                    isCollapsed ? "bg-transparent" : "bg-zinc-900/40 mx-3 w-[calc(100%-24px)]",
-                    "hover:bg-zinc-900/60 focus-within:bg-zinc-900/80"
-                )}>
-                    <div className="w-[56px] shrink-0 flex items-center justify-center">
-                        <Search
-                            size={16}
-                            className={cn("shrink-0 transition-colors duration-300",
-                                searchQuery ? "text-cyan-400" : "text-zinc-600",
-                                isCollapsed && "hover:text-cyan-400 cursor-pointer")}
-                            onClick={() => isCollapsed && setIsCollapsed(false)}
-                        />
-                    </div>
-                    <AnimatePresence>
-                        {!isCollapsed && (
-                            <motion.input
-                                key="search-input"
-                                initial={{ opacity: 0, x: -8 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -8 }}
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                                placeholder="Quick Search"
-                                className="bg-transparent border-none outline-none w-full placeholder:text-zinc-600 text-zinc-200 font-medium pr-3"
+                <div
+                    ref={searchRef}
+                    className={cn(
+                        "relative flex flex-col w-full",
+                        isCollapsed ? "" : "mx-3 w-[calc(100%-24px)]"
+                    )}
+                >
+                    {/* Input row */}
+                    <div className={cn(
+                        "flex items-center w-full rounded-lg text-xs h-9 border border-white/8 transition-[background-color] duration-300",
+                        isCollapsed ? "bg-transparent" : "bg-zinc-900/40",
+                        "hover:bg-zinc-900/60 focus-within:bg-zinc-900/80",
+                        searchOpen && !isCollapsed ? "rounded-b-none border-b-zinc-800/50" : ""
+                    )}>
+                        <div className="w-[56px] shrink-0 flex items-center justify-center">
+                            <Search
+                                size={16}
+                                className={cn("shrink-0 transition-colors duration-300",
+                                    searchQuery ? "text-cyan-400" : "text-zinc-600",
+                                    isCollapsed && "hover:text-cyan-400 cursor-pointer")}
+                                onClick={() => isCollapsed && setIsCollapsed(false)}
                             />
+                        </div>
+                        <AnimatePresence>
+                            {!isCollapsed && (
+                                <motion.input
+                                    key="search-input"
+                                    initial={{ opacity: 0, x: -8 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -8 }}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                        setSearchQuery(e.target.value);
+                                        if (e.target.value.trim()) setSearchOpen(true);
+                                    }}
+                                    onFocus={() => searchQuery.trim() && setSearchOpen(true)}
+                                    onKeyDown={handleSearchKeyDown}
+                                    placeholder="Quick Search"
+                                    className="bg-transparent border-none outline-none w-full placeholder:text-zinc-600 text-zinc-200 font-medium pr-3"
+                                />
+                            )}
+                        </AnimatePresence>
+                        {!isCollapsed && !searchQuery && (
+                            <span className="text-[10px] font-mono text-zinc-700 px-1 opacity-50">⌘K</span>
+                        )}
+                    </div>
+
+                    {/* Results Dropdown */}
+                    <AnimatePresence>
+                        {!isCollapsed && searchOpen && (
+                            <motion.div
+                                key="search-dropdown"
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.15, ease: 'easeOut' }}
+                                className="absolute top-full left-0 right-0 z-[200] bg-zinc-900 border border-white/8 border-t-0 rounded-b-lg shadow-2xl overflow-hidden"
+                            >
+                                {searchResults.length === 0 ? (
+                                    <div className="px-4 py-3 text-[11px] text-zinc-600 font-medium">
+                                        No results found
+                                    </div>
+                                ) : (
+                                    <div className="overflow-y-auto max-h-[280px] py-1 custom-scrollbar">
+                                        {searchResults.map((result, idx) => (
+                                            <button
+                                                key={`${result.type}-${result.id}`}
+                                                onMouseDown={(e) => { e.preventDefault(); handleResultClick(result); }}
+                                                onMouseEnter={() => setActiveIndex(idx)}
+                                                className={cn(
+                                                    "flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors duration-100 outline-none",
+                                                    idx === activeIndex
+                                                        ? "bg-zinc-800 text-zinc-100"
+                                                        : "text-zinc-300 hover:bg-zinc-800/60"
+                                                )}
+                                            >
+                                                {result.type === 'folder' ? (
+                                                    <FolderOpen size={13} className="shrink-0 text-amber-400" />
+                                                ) : (
+                                                    <FileText size={13} className={cn(
+                                                        "shrink-0",
+                                                        result.type === 'root-file' ? "text-cyan-400" : "text-indigo-400"
+                                                    )} />
+                                                )}
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-[12px] font-semibold truncate leading-tight">
+                                                        {result.label}
+                                                    </span>
+                                                    {result.type === 'folder-file' && (
+                                                        <span className="text-[10px] text-zinc-500 truncate leading-tight">
+                                                            in {result.folderName}
+                                                        </span>
+                                                    )}
+                                                    {result.type === 'root-file' && (
+                                                        <span className="text-[10px] text-zinc-600 truncate leading-tight">
+                                                            Root file
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </motion.div>
                         )}
                     </AnimatePresence>
-                    {!isCollapsed && !searchQuery && (
-                        <span className="text-[10px] font-mono text-zinc-700 px-1 opacity-50">⌘K</span>
-                    )}
                 </div>
 
                 <SidebarItem
